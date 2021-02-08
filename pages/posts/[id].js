@@ -1,40 +1,45 @@
-
+import { useState, useEffect } from 'react';
 import utilStyles from '../../styles/utils.module.css'
 import Head from 'next/head'
 import Layout from '../../components/layout'
-import { getAllPostIds, getPostData } from '../../lib/posts'
 import Date from '../../components/date'
+import fire from '../../config/fire-config';
 
-export async function getStaticProps({ params }) {
-  const postData = await getPostData(params.id)
-  return {
+const Post = (props) => {
+
+  return (
+    props &&
+    (<Layout>
+      <Head>
+        <title>{props.title}</title>
+      </Head>
+      <article>
+        <h1 className={utilStyles.headingXl}>{props.title}</h1>
+        <div className={utilStyles.lightText}>                
+          <Date dateString={props.date}/>
+        </div>
+        <div dangerouslySetInnerHTML={{ __html: props.contentHtml }} />
+      </article>
+    </Layout>)
+  )
+}
+
+export const getServerSideProps = async ({ query }) => {
+  let content = {}
+
+  await fire.firestore()
+    .collection('blog')
+    .doc(query.id)
+    .get()
+    .then(result => {
+      content = {...result.data(), date: result.data().date.toDate().toJSON()}
+    });
+
+return {
     props: {
-      postData
+      ...content
     }
   }
 }
 
-export async function getStaticPaths() {
-  const paths = getAllPostIds()
-  return {
-    paths,
-    fallback: false
-  }
-}
-
-export default function Post({ postData }) {
-  return (
-    <Layout>
-      <Head>
-        <title>{postData.title}</title>
-      </Head>
-      <article>
-        <h1 className={utilStyles.headingXl}>{postData.title}</h1>
-        <div className={utilStyles.lightText}>
-          <Date dateString={postData.date} />
-        </div>
-        <div dangerouslySetInnerHTML={{ __html: postData.contentHtml }} />
-      </article>
-    </Layout>
-  )
-}
+export default Post
